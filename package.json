@@ -1,0 +1,40 @@
+{
+  "name": "@conaonda/ol-cog-layers",
+  "version": "0.1.0",
+  "description": "OpenLayers COG rendering layers — WebGL tile + Canvas image pipelines",
+  "type": "module",
+  "main": "dist/ol-cog-layers.js",
+  "module": "dist/ol-cog-layers.js",
+  "exports": {
+    ".": {
+      "import": "./dist/ol-cog-layers.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build"
+  },
+  "peerDependencies": {
+    "ol": ">=10.0.0"
+  },
+  "dependencies": {
+    "geotiff": "^2.1.3"
+  },
+  "devDependencies": {
+    "vite": "^6.1.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/conaonda/ol-cog-layers.git"
+  },
+  "keywords": [
+    "openlayers",
+    "cog",
+    "geotiff",
+    "webgl",
+    "gis"
+  ]
+}
