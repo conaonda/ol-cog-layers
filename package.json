@@ -1,6 +1,6 @@
 {
   "name": "@conaonda/ol-cog-layers",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "OpenLayers COG rendering layers — WebGL tile + Canvas image pipelines",
   "type": "module",
   "main": "dist/ol-cog-layers.js",
