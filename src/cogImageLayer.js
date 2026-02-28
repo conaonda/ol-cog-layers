@@ -90,6 +90,8 @@ export async function createCOGImageLayer({ url, projectionMode = 'reproject', v
   let cachedKey = null
   let debounceTimer = null
   let abortCtrl = null
+  let pendingExtent = null
+  let pendingSize = null
 
   // Render overview as low-res preview so the first frame is not blank
   const pvW = overview.width, pvH = overview.height
@@ -105,7 +107,7 @@ export async function createCOGImageLayer({ url, projectionMode = 'reproject', v
 
   const extentKey = (ext, w, h) => `${ext.map(v => v.toFixed(1)).join(',')}_${w}x${h}`
 
-  const loadAndRender = async (extent, size, canvas) => {
+  const loadAndRender = async (extent, size) => {
     // Abort previous in-flight request
     if (abortCtrl) abortCtrl.abort()
     abortCtrl = new AbortController()
@@ -150,9 +152,11 @@ export async function createCOGImageLayer({ url, projectionMode = 'reproject', v
       fillPixelData(imgData.data, rasters, bandInfo, stats, natW * natH, currentColormap)
       tmpCtx.putImageData(imgData, 0, 0)
 
-      // GPU-accelerated scaling to viewport
+      // Create output canvas and scale rendered data to viewport size
+      const canvas = document.createElement('canvas')
+      canvas.width = size[0]
+      canvas.height = size[1]
       const ctx = canvas.getContext('2d')
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
       const drawW = Math.round(size[0] * (clipW / fullW))
       const drawH = Math.round(size[1] * (clipH / fullH))
       const offsetX = Math.round(size[0] * ((clipped[0] - reqExtent[0]) / fullW))
@@ -193,8 +197,11 @@ export async function createCOGImageLayer({ url, projectionMode = 'reproject', v
         ctx.drawImage(cachedCanvas, dx, dy, dw, dh)
       }
 
+      pendingExtent = extent
+      pendingSize = size
+
       clearTimeout(debounceTimer)
-      debounceTimer = setTimeout(() => loadAndRender(extent, size, canvas), debounceMs)
+      debounceTimer = setTimeout(() => loadAndRender(pendingExtent, pendingSize), debounceMs)
 
       return canvas
     },
