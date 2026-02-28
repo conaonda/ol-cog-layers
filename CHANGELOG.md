@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1
+
+### Fixed
+- Fix CI test failure: add missing `ModelTransformation` property to mock `fileDirectory` in `createMockTiff` helper, ensuring `computePixelToViewAffine()` returns the correct affine transform
+
 ## 0.3.0
 
 ### Added

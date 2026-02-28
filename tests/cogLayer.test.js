@@ -43,6 +43,7 @@ function createMockTiff({ samplesPerPixel = 3, photometric = 2, extraSamples, im
     fileDirectory: {
       PhotometricInterpretation: photometric,
       ExtraSamples: extraSamples,
+      ModelTransformation: modelTransformation || null,
       getValue: vi.fn(() => modelTransformation || null)
     },
     getWidth: () => 10,
