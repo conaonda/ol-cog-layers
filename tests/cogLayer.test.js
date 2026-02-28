@@ -358,6 +358,75 @@ describe('createCOGLayer', () => {
     expect(patchRendererWithAffine).not.toHaveBeenCalled()
   })
 
+  it('affine mode patches tileGrid with getTileRangeForExtentAndZ', async () => {
+    setupSourceMock()
+    const mt = [1, 0.5, 0, 100, -0.5, 1, 0, 200, 0, 0, 0, 0, 0, 0, 0, 1]
+    const mockTiff = createMockTiff({
+      samplesPerPixel: 3, photometric: 2,
+      modelTransformation: mt
+    })
+    fromUrl.mockResolvedValue(mockTiff)
+
+    const result = await createCOGLayer({
+      url: 'http://example.com/rotated.tif',
+      projectionMode: 'affine',
+      viewProjection: 'EPSG:3857',
+      targetTileSize: 256
+    })
+
+    // The tileGrid should have been patched
+    const tileGrid = result.source.tileGrid
+    expect(tileGrid.getTileRangeForExtentAndZ).toBeDefined()
+    const range = tileGrid.getTileRangeForExtentAndZ([0, 0, 100, 100], 0)
+    expect(range).toBeDefined()
+    expect(range).toHaveProperty('minX')
+    expect(range).toHaveProperty('maxX')
+    expect(tileGrid.tileCoordIntersectsViewport()).toBe(true)
+  })
+
+  it('affine mode extra levels with uncapped tile sizes', async () => {
+    // Large coarsest image so tile sizes are not capped (isCapped = false)
+    // getTileSize returns array to cover Array.isArray branches
+    const coarsestImg = { getWidth: () => 4096, getHeight: () => 4096 }
+    const mainImg = { getWidth: () => 100, getHeight: () => 100 }
+    GeoTIFFSource.mockImplementation(function (opts) {
+      this.opts = opts
+      this.getView = () => Promise.resolve({
+        projection: 'EPSG:32632',
+        extent: [0, 0, 10000, 10000],
+        center: [5000, 5000],
+        zoom: 10
+      })
+      this.tileGrid = {
+        getResolutions: () => [0.1],
+        getTileSize: (z) => [256, 256],
+        getMinZoom: () => 0
+      }
+      this.sourceImagery_ = [[coarsestImg, mainImg]]
+      this.sourceMasks_ = [[coarsestImg, mainImg]]
+      this.setTileSizes = vi.fn()
+      this.projection = null
+      this.tileGridForProjection_ = {}
+      this.transformMatrix = null
+    })
+
+    const mt = [1, 0.5, 0, 100, -0.5, 1, 0, 200, 0, 0, 0, 0, 0, 0, 0, 1]
+    const mockTiff = createMockTiff({
+      samplesPerPixel: 3, photometric: 2,
+      modelTransformation: mt
+    })
+    fromUrl.mockResolvedValue(mockTiff)
+
+    const result = await createCOGLayer({
+      url: 'http://example.com/rotated.tif',
+      projectionMode: 'affine',
+      viewProjection: 'EPSG:3857',
+      targetTileSize: 256
+    })
+
+    expect(result.layer).toBeDefined()
+  })
+
   it('handles opacity parameter', async () => {
     setupSourceMock()
     const mockTiff = createMockTiff({ samplesPerPixel: 3, photometric: 2 })
@@ -371,15 +440,5 @@ describe('createCOGLayer', () => {
     })
 
     expect(result.layer).toBeDefined()
-
-    // Exercise patchTileGridForAffine's patched methods
-    const source = result.source
-    if (source.tileGrid?.getTileRangeForExtentAndZ) {
-      const range = source.tileGrid.getTileRangeForExtentAndZ([0, 0, 100, 100], 0)
-      expect(range).toBeDefined()
-    }
-    if (source.tileGrid?.tileCoordIntersectsViewport) {
-      expect(source.tileGrid.tileCoordIntersectsViewport()).toBe(true)
-    }
   })
 })
