@@ -327,7 +327,7 @@ function patchTileGridForAffine(tileGrid, pixelToView, sourceTileSizes, overview
   tileGrid.tileCoordIntersectsViewport = function () { return true }
 }
 
-export async function createCOGLayer({ url, bandInfo: overrideBandInfo, projectionMode, viewProjection, targetTileSize = 256, opacity = 1 }) {
+export async function createCOGLayer({ url, bandInfo: overrideBandInfo, projectionMode, viewProjection, targetTileSize = 256, opacity = 1, preload = 0 }) {
   const tiff = await tiffFromUrl(url, { blockSize: GEOTIFF_BLOCK_SIZE, cacheSize: GEOTIFF_CACHE_SIZE })
 
   const bandInfo = overrideBandInfo || await detectBands(tiff)
@@ -368,7 +368,7 @@ export async function createCOGLayer({ url, bandInfo: overrideBandInfo, projecti
     style: buildStyle(bandInfo, stats),
     extent: extent,
     opacity,
-    preload: 0,
+    preload,
     transition: 250
   })
 

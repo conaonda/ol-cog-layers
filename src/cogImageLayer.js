@@ -50,7 +50,7 @@ function fillPixelData(px, rasters, bandInfo, stats, pixelCount, colormapName) {
   }
 }
 
-export async function createCOGImageLayer({ url, projectionMode = 'reproject', viewProjection, opacity = 1, resolutionMultiplier = 1 }) {
+export async function createCOGImageLayer({ url, projectionMode = 'reproject', viewProjection, opacity = 1, resolutionMultiplier = 1, debounceMs = 500 }) {
   const tiff = await tiffFromUrl(url, { blockSize: GEOTIFF_BLOCK_SIZE, cacheSize: GEOTIFF_CACHE_SIZE })
 
   const [bandInfo, image] = await Promise.all([
@@ -194,7 +194,7 @@ export async function createCOGImageLayer({ url, projectionMode = 'reproject', v
       }
 
       clearTimeout(debounceTimer)
-      debounceTimer = setTimeout(() => loadAndRender(extent, size, canvas), 200)
+      debounceTimer = setTimeout(() => loadAndRender(extent, size, canvas), debounceMs)
 
       return canvas
     },
