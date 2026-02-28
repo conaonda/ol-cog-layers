@@ -1,6 +1,12 @@
 # @conaonda/ol-cog-layers
 
-OpenLayers COG (Cloud Optimized GeoTIFF) rendering layers — WebGL tile + Canvas image pipelines.
+**Why this library?** OpenLayers' built-in `ol/source/GeoTIFF` assumes the COG's native CRS matches the view projection, or relies on its internal reprojection pipeline. When you load a UTM-projected COG (e.g. EPSG:32615) onto an EPSG:3857 web map, the built-in approach often produces misaligned tiles, broken extents, or simply fails for rotated GeoTIFFs that use a `ModelTransformation` matrix.
+
+`ol-cog-layers` solves this with a single function call — and its `projectionMode: 'affine'` mode bypasses OL's reprojection entirely, patching the tile grid and renderer to apply a GPU-accelerated affine transform directly. This means:
+
+- UTM COGs render **pixel-perfect** on EPSG:3857 basemaps
+- **Rotated/skewed GeoTIFFs** (with ModelTransformation) display at the correct position and angle
+- No CPU-side reprojection overhead — everything stays on the GPU
 
 ## Features
 
@@ -10,6 +16,17 @@ OpenLayers COG (Cloud Optimized GeoTIFF) rendering layers — WebGL tile + Canva
 - **Automatic band detection** — RGB vs grayscale auto-detection from GeoTIFF metadata
 - **Min/Max from overview** — fast statistics extraction from the coarsest overview level
 - **Built-in colormaps** — viridis, inferno, plasma for single-band visualization
+
+## How `projectionMode: 'affine'` Works
+
+When `projectionMode` is set to `'affine'`, ol-cog-layers:
+
+1. Reads the GeoTIFF's `ModelTransformation` (or `ModelTiepoint` + `ModelPixelScale`)
+2. Computes an affine matrix mapping **pixel coordinates → view CRS**
+3. Creates a custom `TileGrid` aligned to the COG's native pixel grid
+4. **Patches the WebGL tile renderer** to apply the affine transform on the GPU — no per-tile reprojection
+
+This is especially critical for SAR imagery (e.g. Umbra, Capella) where the `ModelTransformation` includes rotation terms that OL's standard pipeline cannot handle.
 
 ## Install
 
@@ -26,19 +43,27 @@ npm install @conaonda/ol-cog-layers
 ### WebGL Tile Layer
 
 ```js
+import { Map, View } from 'ol'
+import TileLayer from 'ol/layer/Tile'
+import OSM from 'ol/source/OSM'
 import { createCOGLayer } from '@conaonda/ol-cog-layers'
 
-const { layer, extent, center, zoom, source, tiff } = await createCOGLayer({
-  url: 'https://example.com/image.tif',
+// SkySat RGB imagery (UTM → EPSG:3857 via affine)
+const { layer, extent, projection } = await createCOGLayer({
+  url: 'https://storage.googleapis.com/pdd-stac/disasters/hurricane-harvey/0831/SkySat_20170831T195552Z_RGB.tif',
   viewProjection: 'EPSG:3857',
-  // Optional:
-  // bandInfo: { type: 'rgb', bands: [1, 2, 3] },
-  // projectionMode: 'affine',
-  // targetTileSize: 256,
-  // opacity: 1,
+  projectionMode: 'affine',
 })
 
-map.addLayer(layer)
+const map = new Map({
+  target: 'map',
+  layers: [
+    new TileLayer({ source: new OSM() }),
+    layer,
+  ],
+  view: new View({ projection: 'EPSG:3857' }),
+})
+
 map.getView().fit(extent)
 ```
 
@@ -105,7 +130,7 @@ import {
 | `targetTileSize` | `number` | `256` | Target tile size in pixels |
 | `opacity` | `number` | `1` | Layer opacity |
 
-Returns: `Promise<{ layer, source, extent, center, zoom, tiff }>`
+Returns: `Promise<{ layer, source, extent, center, projection, zoom, tiff }>`
 
 ### `createCOGImageLayer(options)`
 
@@ -117,7 +142,7 @@ Returns: `Promise<{ layer, source, extent, center, zoom, tiff }>`
 | `opacity` | `number` | `1` | Layer opacity |
 | `resolutionMultiplier` | `number` | `1` | Resolution scale factor |
 
-Returns: `Promise<{ layer, source, extent, center, tiff, getStats(), getBandInfo(), setStats(stats), setColormap(name) }>`
+Returns: `Promise<{ layer, source, extent, center, projection, tiff, getStats(), getBandInfo(), setStats(stats), setColormap(name) }>`
 
 ## License
 

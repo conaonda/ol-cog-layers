@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rotated SAR — ol-cog-layers</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.5.0/ol.css">
+  <script type="module" crossorigin src="/ol-cog-layers/assets/rotated-sar-D7-vRZdz.js"></script>
+  <link rel="modulepreload" crossorigin href="/ol-cog-layers/assets/cogImageLayer-hWMU-Rw3.js">
+  <link rel="stylesheet" crossorigin href="/ol-cog-layers/assets/style-VquZYJSA.css">
+</head>
+<body>
+  <div class="header">
+    <a href="../">← Examples</a>
+    <h1>Rotated SAR (Umbra)</h1>
+  </div>
+  <div class="example-container">
+    <div class="code-panel">
+      <h2>Code</h2>
+      <div id="status" class="status loading">Loading COG…</div>
+      <pre><code>import { createCOGLayer, detectBands,
+  getMinMaxFromOverview, buildStyleWithColormap
+} from 'ol-cog-layers';
+
+// Umbra SAR with ModelTransformation (rotation)
+// affine mode renders at correct position &amp; angle
+const { layer, extent } = await createCOGLayer({
+  url: umbraUrl,
+  viewProjection: 'EPSG:3857',
+  projectionMode: 'affine',
+});
+
+// Viridis colormap for grayscale SAR
+const style = buildStyleWithColormap(bandInfo, stats, 'viridis');
+layer.setStyle(style);
+
+map.getView().fit(extent);</code></pre>
+    </div>
+    <div class="map-panel">
+      <div id="map" class="map"></div>
+    </div>
+  </div>
+</body>
+</html>

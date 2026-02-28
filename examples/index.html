@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ol-cog-layers Examples</title>
+  <link rel="stylesheet" href="shared/style.css">
+</head>
+<body>
+  <div class="header">
+    <h1>ol-cog-layers</h1>
+    <span>Examples</span>
+  </div>
+  <div class="cards">
+    <div class="card">
+      <h2>Basic COG Layer</h2>
+      <p>Load a UTM SkySat RGB COG onto an EPSG:3857 basemap using <code>projectionMode: 'affine'</code>. Pixel-perfect alignment with OSM tiles.</p>
+      <a href="basic-cog/">View Example</a>
+    </div>
+    <div class="card">
+      <h2>Rotated SAR</h2>
+      <p>Umbra SAR imagery with a <code>ModelTransformation</code> rotation matrix. Affine mode renders it at the correct position and angle.</p>
+      <a href="rotated-sar/">View Example</a>
+    </div>
+    <div class="card">
+      <h2>Colormap</h2>
+      <p>Capella SAR grayscale COG with real-time colormap switching (grayscale, viridis, inferno, plasma).</p>
+      <a href="colormap/">View Example</a>
+    </div>
+    <div class="card">
+      <h2>Side-by-Side Comparison</h2>
+      <p>Compare vanilla OpenLayers GeoTIFF vs ol-cog-layers affine mode. Same SkySat COG — see the difference in projection handling.</p>
+      <a href="comparison/">View Example</a>
+    </div>
+  </div>
+</body>
+</html>

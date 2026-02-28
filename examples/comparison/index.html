@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comparison — ol-cog-layers</title>
+  <link rel="stylesheet" href="../shared/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.5.0/ol.css">
+</head>
+<body>
+  <div class="header">
+    <a href="../">← Examples</a>
+    <h1>Side-by-Side Comparison</h1>
+  </div>
+  <div class="example-container">
+    <div class="code-panel">
+      <h2>Vanilla OpenLayers</h2>
+      <pre><code>import GeoTIFF from 'ol/source/GeoTIFF';
+import WebGLTileLayer from 'ol/layer/WebGLTile';
+
+// UTM COG on EPSG:3857 view — misaligned or broken
+const source = new GeoTIFF({
+  sources: [{ url: skySatUrl, bands: [1, 2, 3] }],
+});
+const layer = new WebGLTileLayer({ source });
+
+const map = new Map({
+  target: 'map-vanilla',
+  layers: [new TileLayer({ source: new OSM() }), layer],
+  view: new View({ projection: 'EPSG:3857' }),
+});</code></pre>
+      <h2>ol-cog-layers (affine)</h2>
+      <pre><code>import { createCOGLayer } from 'ol-cog-layers';
+
+// Same COG — pixel-perfect on EPSG:3857
+const { layer, extent } = await createCOGLayer({
+  url: skySatUrl,
+  viewProjection: 'EPSG:3857',
+  projectionMode: 'affine',
+});
+
+const map = new Map({
+  target: 'map-easy',
+  layers: [new TileLayer({ source: new OSM() }), layer],
+  view: new View({ projection: 'EPSG:3857' }),
+});
+map.getView().fit(extent);</code></pre>
+      <div id="status" class="status loading">Loading…</div>
+    </div>
+    <div class="map-panel split">
+      <div class="map-half">
+        <div class="map-label">Vanilla OpenLayers</div>
+        <div id="map-vanilla" class="map"></div>
+      </div>
+      <div class="map-half">
+        <div class="map-label">ol-cog-layers (affine)</div>
+        <div id="map-easy" class="map"></div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
