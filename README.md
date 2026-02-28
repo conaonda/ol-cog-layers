@@ -129,6 +129,7 @@ import {
 | `projectionMode` | `string` | — | Set to `'affine'` for rotated GeoTIFFs |
 | `targetTileSize` | `number` | `256` | Target tile size in pixels |
 | `opacity` | `number` | `1` | Layer opacity |
+| `preload` | `number` | `0` | Number of adjacent zoom levels to preload tiles for |
 
 Returns: `Promise<{ layer, source, extent, center, projection, zoom, tiff }>`
 
@@ -141,6 +142,7 @@ Returns: `Promise<{ layer, source, extent, center, projection, zoom, tiff }>`
 | `projectionMode` | `string` | `'reproject'` | `'reproject'` or `'affine'` |
 | `opacity` | `number` | `1` | Layer opacity |
 | `resolutionMultiplier` | `number` | `1` | Resolution scale factor |
+| `debounceMs` | `number` | `500` | Debounce delay (ms) before re-fetching raster data on view change |
 
 Returns: `Promise<{ layer, source, extent, center, projection, tiff, getStats(), getBandInfo(), setStats(stats), setColormap(name) }>`
 
