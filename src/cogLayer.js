@@ -16,7 +16,7 @@ const GEOTIFF_CACHE_SIZE = 500
  */
 async function computeRotatedSourceExtent(tiff) {
   const image = await tiff.getImage(0)
-  const mt = image.fileDirectory.getValue('ModelTransformation')
+  const mt = image.fileDirectory.ModelTransformation
 
   if (!mt || (mt[1] === 0 && mt[4] === 0)) return null
 
@@ -37,7 +37,7 @@ async function computeRotatedSourceExtent(tiff) {
 
 async function computePixelToViewAffine(tiff, cogProjection, viewProjection) {
   const image = await tiff.getImage(0)
-  const mt = image.fileDirectory.getValue('ModelTransformation')
+  const mt = image.fileDirectory.ModelTransformation
 
   if (!mt || (mt[1] === 0 && mt[4] === 0)) return null
 
@@ -354,8 +354,14 @@ export async function createCOGLayer({ url, bandInfo: overrideBandInfo, projecti
 
   // view.fit / layer extent: 회전 AABB가 있으면 사용, 없으면 원본 사용
   const displayExtentSrc = rotatedSrcExtent || cogExtent
-  const extent = displayExtentSrc ? transformExtent(displayExtentSrc, cogProjection, viewProjection) : undefined
-  const center = cogView.center ? transform(cogView.center, cogProjection, viewProjection) : undefined
+  const resolvedViewProjection = viewProjection || cogProjection
+  const extent = displayExtentSrc
+    ? (resolvedViewProjection !== cogProjection ? transformExtent(displayExtentSrc, cogProjection, resolvedViewProjection) : displayExtentSrc.slice())
+    : undefined
+  const center = cogView.center
+    ? (resolvedViewProjection !== cogProjection ? transform(cogView.center, cogProjection, resolvedViewProjection) : cogView.center.slice())
+    : undefined
+  const projection = resolvedViewProjection
 
   const layer = new WebGLTileLayer({
     source: source,
@@ -374,5 +380,5 @@ export async function createCOGLayer({ url, bandInfo: overrideBandInfo, projecti
     }
   }
 
-  return { layer, source, extent, center, zoom: cogView.zoom, tiff }
+  return { layer, source, extent, center, projection, zoom: cogView.zoom, tiff }
 }

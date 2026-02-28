@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Basic COG — ol-cog-layers</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.5.0/ol.css">
+  <script type="module" crossorigin src="/ol-cog-layers/assets/basic-cog-CZzA0tL7.js"></script>
+  <link rel="modulepreload" crossorigin href="/ol-cog-layers/assets/cogImageLayer-hWMU-Rw3.js">
+  <link rel="stylesheet" crossorigin href="/ol-cog-layers/assets/style-VquZYJSA.css">
+</head>
+<body>
+  <div class="header">
+    <a href="../">← Examples</a>
+    <h1>Basic COG Layer</h1>
+  </div>
+  <div class="example-container">
+    <div class="code-panel">
+      <h2>Code</h2>
+      <div id="status" class="status loading">Loading COG…</div>
+      <pre><code>import { Map, View } from 'ol';
+import TileLayer from 'ol/layer/Tile';
+import OSM from 'ol/source/OSM';
+import { createCOGLayer } from 'ol-cog-layers';
+
+// SkySat RGB (UTM) → EPSG:3857 via affine transform
+const { layer, extent } = await createCOGLayer({
+  url: 'https://storage.googleapis.com/.../SkySat_RGB.tif',
+  viewProjection: 'EPSG:3857',
+  projectionMode: 'affine',   // bypass OL reprojection
+});
+
+const map = new Map({
+  target: 'map',
+  layers: [new TileLayer({ source: new OSM() }), layer],
+  view: new View({ projection: 'EPSG:3857' }),
+});
+map.getView().fit(extent);</code></pre>
+    </div>
+    <div class="map-panel">
+      <div id="map" class="map"></div>
+    </div>
+  </div>
+</body>
+</html>

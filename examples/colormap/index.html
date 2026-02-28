@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Colormap — ol-cog-layers</title>
+  <link rel="stylesheet" href="../shared/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.5.0/ol.css">
+</head>
+<body>
+  <div class="header">
+    <a href="../">← Examples</a>
+    <h1>Colormap (Capella SAR)</h1>
+  </div>
+  <div class="example-container">
+    <div class="code-panel">
+      <h2>Code</h2>
+      <div id="status" class="status loading">Loading COG…</div>
+      <div class="controls">
+        <label for="colormap-select">Colormap: </label>
+        <select id="colormap-select" disabled>
+          <option value="grayscale">grayscale</option>
+          <option value="viridis" selected>viridis</option>
+          <option value="inferno">inferno</option>
+          <option value="plasma">plasma</option>
+        </select>
+      </div>
+      <pre><code>import { createCOGLayer, buildStyleWithColormap,
+         detectBands, getMinMaxFromOverview } from 'ol-cog-layers';
+
+const { layer, extent } = await createCOGLayer({
+  url: capellaUrl,
+  viewProjection: 'EPSG:3857',
+  projectionMode: 'affine',
+});
+
+// Switch colormap on select change
+select.addEventListener('change', () => {
+  const style = buildStyleWithColormap(bandInfo, stats, select.value);
+  layer.setStyle(style);
+});</code></pre>
+      <div id="band-info" style="margin-top:12px; font-size:13px;"></div>
+    </div>
+    <div class="map-panel">
+      <div id="map" class="map"></div>
+    </div>
+  </div>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
