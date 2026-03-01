@@ -243,4 +243,23 @@ describe('createCOGImageLayer', () => {
     expect(bandInfo.type).toBe('rgb')
     expect(bandInfo.bands).toEqual([1, 2, 3])
   })
+
+  it('throws when url is missing', async () => {
+    await expect(createCOGImageLayer({ viewProjection: 'EPSG:3857' })).rejects.toThrow('url is required')
+  })
+
+  it('throws when affine mode without viewProjection', async () => {
+    await expect(createCOGImageLayer({
+      url: 'http://example.com/test.tif',
+      projectionMode: 'affine'
+    })).rejects.toThrow('viewProjection is required for affine mode')
+  })
+
+  it('wraps tiff loading errors', async () => {
+    fromUrl.mockRejectedValue(new Error('Network error'))
+    await expect(createCOGImageLayer({
+      url: 'http://example.com/bad.tif',
+      viewProjection: 'EPSG:3857'
+    })).rejects.toThrow('Failed to load COG')
+  })
 })

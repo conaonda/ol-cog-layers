@@ -329,7 +329,15 @@ function patchTileGridForAffine(tileGrid, pixelToView, sourceTileSizes, overview
 }
 
 export async function createCOGLayer({ url, bandInfo: overrideBandInfo, projectionMode, viewProjection, targetTileSize = 256, opacity = 1, preload = 0, nodata = 0, fetchOptions } = {}) {
-  const tiff = await tiffFromUrl(url, { blockSize: GEOTIFF_BLOCK_SIZE, cacheSize: GEOTIFF_CACHE_SIZE, ...fetchOptions })
+  if (!url) throw new Error('url is required')
+  if (projectionMode === 'affine' && !viewProjection) throw new Error('viewProjection is required for affine mode')
+
+  let tiff
+  try {
+    tiff = await tiffFromUrl(url, { blockSize: GEOTIFF_BLOCK_SIZE, cacheSize: GEOTIFF_CACHE_SIZE, ...fetchOptions })
+  } catch (err) {
+    throw new Error(`Failed to load COG from ${url}: ${err.message}`)
+  }
 
   const bandInfo = overrideBandInfo || await detectBands(tiff)
   const resolvedBands = bandInfo.bands

@@ -51,10 +51,19 @@ export function fillPixelData(px, rasters, bandInfo, stats, pixelCount, colormap
   }
 }
 
-export async function createCOGImageLayer({ url, projectionMode = 'reproject', viewProjection, opacity = 1, resolutionMultiplier = 1, debounceMs = 500, enablePerf = false, nodata = 0, fetchOptions } = {}) {
+export async function createCOGImageLayer({ url, projectionMode = 'reproject', viewProjection, opacity = 1, resolutionMultiplier = 1, debounceMs = 500, enablePerf = false, nodata = 0, fetchOptions, onLoadStart, onLoadEnd, onLoadError } = {}) {
+  if (!url) throw new Error('url is required')
+  if (projectionMode === 'affine' && !viewProjection) throw new Error('viewProjection is required for affine mode')
+
   const canvasPerfMonitor = enablePerf ? createPerfMonitor('canvasFunction') : null
   const renderPerfMonitor = enablePerf ? createPerfMonitor('loadAndRender') : null
-  const tiff = await tiffFromUrl(url, { blockSize: GEOTIFF_BLOCK_SIZE, cacheSize: GEOTIFF_CACHE_SIZE, ...fetchOptions })
+
+  let tiff
+  try {
+    tiff = await tiffFromUrl(url, { blockSize: GEOTIFF_BLOCK_SIZE, cacheSize: GEOTIFF_CACHE_SIZE, ...fetchOptions })
+  } catch (err) {
+    throw new Error(`Failed to load COG from ${url}: ${err.message}`)
+  }
 
   const [bandInfo, image] = await Promise.all([
     detectBands(tiff),
@@ -116,6 +125,7 @@ export async function createCOGImageLayer({ url, projectionMode = 'reproject', v
     abortCtrl = new AbortController()
     const { signal } = abortCtrl
 
+    if (onLoadStart) onLoadStart()
     try {
       const reqExtent = projectionMode === 'affine'
         ? affineViewToCog(extent)
@@ -188,9 +198,11 @@ export async function createCOGImageLayer({ url, projectionMode = 'reproject', v
       cachedExtent = extent.slice()
       cachedCanvas = canvas
       source.changed()
+      if (onLoadEnd) onLoadEnd()
     } catch (err) {
       if (err.name === 'AbortError') return
       console.error('COG image load error:', err)
+      if (onLoadError) onLoadError(err)
     }
   }
 

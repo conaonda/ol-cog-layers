@@ -100,6 +100,9 @@ export interface COGImageLayerOptions {
   enablePerf?: boolean
   nodata?: number
   fetchOptions?: FetchOptions
+  onLoadStart?: () => void
+  onLoadEnd?: () => void
+  onLoadError?: (error: Error) => void
 }
 
 export interface COGImageLayerResult {
