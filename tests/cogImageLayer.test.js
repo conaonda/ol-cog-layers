@@ -22,6 +22,9 @@ vi.mock('geotiff', () => ({
   fromUrl: vi.fn(),
   Pool: vi.fn(function () {})
 }))
+vi.mock('../src/fillPixelWorker.js', () => ({
+  fillPixelDataAsync: vi.fn(() => Promise.resolve(null))
+}))
 vi.mock('../src/cogLayer.js', () => ({
   detectBands: vi.fn(() => Promise.resolve({ type: 'rgb', bands: [1, 2, 3] })),
   getMinMaxFromOverview: vi.fn(() => Promise.resolve({
