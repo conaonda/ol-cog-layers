@@ -19,7 +19,8 @@ export default defineConfig({
         'basic-cog': resolve(__dirname, 'examples/basic-cog/index.html'),
         'rotated-sar': resolve(__dirname, 'examples/rotated-sar/index.html'),
         colormap: resolve(__dirname, 'examples/colormap/index.html'),
-        comparison: resolve(__dirname, 'examples/comparison/index.html')
+        comparison: resolve(__dirname, 'examples/comparison/index.html'),
+        perf: resolve(__dirname, 'examples/perf/index.html')
       }
     }
   }
