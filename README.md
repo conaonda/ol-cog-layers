@@ -114,6 +114,7 @@ import {
   createCOGSource,      // Create ol/source/GeoTIFF with defaults
   COLORMAPS,            // { grayscale, viridis, inferno, plasma }
   applyColormapToPixel, // Apply colormap LUT to a normalized value (0-255)
+  registerColormap,     // Register a custom 256-entry [r,g,b] colormap
 } from '@conaonda/ol-cog-layers'
 ```
 
@@ -130,6 +131,8 @@ import {
 | `targetTileSize` | `number` | `256` | Target tile size in pixels |
 | `opacity` | `number` | `1` | Layer opacity |
 | `preload` | `number` | `0` | Number of adjacent zoom levels to preload tiles for |
+| `nodata` | `number` | `0` | Nodata value to treat as transparent |
+| `fetchOptions` | `object` | — | Options passed to geotiff.js source (e.g. `{ headers: { Authorization: 'Bearer ...' } }`) |
 
 Returns: `Promise<{ layer, source, extent, center, projection, zoom, tiff }>`
 
@@ -144,6 +147,8 @@ Returns: `Promise<{ layer, source, extent, center, projection, zoom, tiff }>`
 | `resolutionMultiplier` | `number` | `1` | Resolution scale factor |
 | `debounceMs` | `number` | `500` | Debounce delay (ms) before re-fetching raster data on view change |
 | `enablePerf` | `boolean` | `false` | Enable built-in performance monitoring |
+| `nodata` | `number` | `0` | Nodata value to treat as transparent |
+| `fetchOptions` | `object` | — | Options passed to geotiff.js source (e.g. `{ headers: { Authorization: 'Bearer ...' } }`) |
 
 Returns: `Promise<{ layer, source, extent, center, tiff, getStats(), getBandInfo(), setStats(stats), setColormap(name), getPerf(), resetPerf() }>`
 

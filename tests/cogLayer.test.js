@@ -168,6 +168,13 @@ describe('getMinMaxFromOverview', () => {
     const result = await getMinMaxFromOverview(tiff, [1])
     expect(result.rasters).toBe(rasterData)
   })
+
+  it('ignores custom nodata value', async () => {
+    const rasterData = [new Float32Array([-999, 10, 20, -999, 5])]
+    const tiff = createMockTiff({ imageCount: 1, rasterData })
+    const result = await getMinMaxFromOverview(tiff, [1], { nodata: -999 })
+    expect(result.stats).toEqual([{ min: 5, max: 20 }])
+  })
 })
 
 // === buildStyle ===
@@ -206,6 +213,19 @@ describe('createCOGSource', () => {
       opaque: false,
       sourceOptions: { allowFullFile: false }
     })
+  })
+
+  it('passes custom nodata value', () => {
+    const source = createCOGSource('http://example.com/test.tif', [1], { nodata: -999 })
+    expect(source.opts.sources[0].nodata).toBe(-999)
+  })
+
+  it('passes fetchOptions to sourceOptions', () => {
+    const source = createCOGSource('http://example.com/test.tif', [1], {
+      fetchOptions: { headers: { Authorization: 'Bearer token' } }
+    })
+    expect(source.opts.sourceOptions.headers).toEqual({ Authorization: 'Bearer token' })
+    expect(source.opts.sourceOptions.allowFullFile).toBe(false)
   })
 })
 

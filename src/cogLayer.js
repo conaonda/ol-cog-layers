@@ -194,7 +194,7 @@ const applyAffineBypass = (cogSource, cogView, viewProjection, targetTileSize) =
   return { sourceTileSizes, overviewScales }
 }
 
-export const getMinMaxFromOverview = async (tiff, bands) => {
+export const getMinMaxFromOverview = async (tiff, bands, { nodata = 0 } = {}) => {
   const count = await tiff.getImageCount()
   const image = await tiff.getImage(count - 1)
   const rasters = await image.readRasters({ samples: bands.map(b => b - 1) })
@@ -204,7 +204,7 @@ export const getMinMaxFromOverview = async (tiff, bands) => {
     let min = Infinity, max = -Infinity
     for (let i = 0; i < band.length; i++) {
       const v = band[i]
-      if (v === 0) continue
+      if (v === nodata) continue
       if (v < min) min = v
       if (v > max) max = v
     }
@@ -264,18 +264,19 @@ export const buildStyle = (bandInfo, stats) => {
   }
 }
 
-export const createCOGSource = (url, bands) => {
+export const createCOGSource = (url, bands, { nodata = 0, fetchOptions } = {}) => {
   return new GeoTIFFSource({
     sources: [{
       url: url,
       bands: bands,
-      nodata: 0
+      nodata
     }],
     normalize: false,
     convertToRGB: false,
     opaque: false,
     sourceOptions: {
-      allowFullFile: false
+      allowFullFile: false,
+      ...fetchOptions
     }
   })
 }
@@ -327,16 +328,16 @@ function patchTileGridForAffine(tileGrid, pixelToView, sourceTileSizes, overview
   tileGrid.tileCoordIntersectsViewport = function () { return true }
 }
 
-export async function createCOGLayer({ url, bandInfo: overrideBandInfo, projectionMode, viewProjection, targetTileSize = 256, opacity = 1, preload = 0 }) {
-  const tiff = await tiffFromUrl(url, { blockSize: GEOTIFF_BLOCK_SIZE, cacheSize: GEOTIFF_CACHE_SIZE })
+export async function createCOGLayer({ url, bandInfo: overrideBandInfo, projectionMode, viewProjection, targetTileSize = 256, opacity = 1, preload = 0, nodata = 0, fetchOptions } = {}) {
+  const tiff = await tiffFromUrl(url, { blockSize: GEOTIFF_BLOCK_SIZE, cacheSize: GEOTIFF_CACHE_SIZE, ...fetchOptions })
 
   const bandInfo = overrideBandInfo || await detectBands(tiff)
   const resolvedBands = bandInfo.bands
 
-  const source = createCOGSource(url, resolvedBands)
+  const source = createCOGSource(url, resolvedBands, { nodata, fetchOptions })
   const [cogView, { stats }] = await Promise.all([
     source.getView(),
-    getMinMaxFromOverview(tiff, resolvedBands)
+    getMinMaxFromOverview(tiff, resolvedBands, { nodata })
   ])
   const cogProjection = cogView.projection
   const cogExtent = cogView.extent

@@ -13,7 +13,7 @@ const GEOTIFF_CACHE_SIZE = 500
 let pool
 try { pool = new Pool(4) } catch { /* worker unavailable – decode on main thread */ }
 
-export function fillPixelData(px, rasters, bandInfo, stats, pixelCount, colormapName) {
+export function fillPixelData(px, rasters, bandInfo, stats, pixelCount, colormapName, nodata = 0) {
   if (bandInfo.type === 'rgb') {
     const r = rasters[0], g = rasters[1], b = rasters[2]
     const rMin = stats[0].min, rScale = 255 / (stats[0].max - stats[0].min)
@@ -21,7 +21,7 @@ export function fillPixelData(px, rasters, bandInfo, stats, pixelCount, colormap
     const bMin = stats[2].min, bScale = 255 / (stats[2].max - stats[2].min)
     for (let i = 0; i < pixelCount; i++) {
       const j = i * 4
-      if (r[i] === 0 && g[i] === 0 && b[i] === 0) {
+      if (r[i] === nodata && g[i] === nodata && b[i] === nodata) {
         px[j + 3] = 0
       } else {
         px[j]     = ((r[i] - rMin) * rScale + 0.5) | 0
@@ -36,7 +36,7 @@ export function fillPixelData(px, rasters, bandInfo, stats, pixelCount, colormap
     const lut = colormapName ? COLORMAPS[colormapName] : null
     for (let i = 0; i < pixelCount; i++) {
       const j = i * 4
-      if (band[i] === 0) {
+      if (band[i] === nodata) {
         px[j + 3] = 0
       } else {
         const v = ((band[i] - bMin) * bScale + 0.5) | 0
@@ -51,17 +51,17 @@ export function fillPixelData(px, rasters, bandInfo, stats, pixelCount, colormap
   }
 }
 
-export async function createCOGImageLayer({ url, projectionMode = 'reproject', viewProjection, opacity = 1, resolutionMultiplier = 1, debounceMs = 500, enablePerf = false }) {
+export async function createCOGImageLayer({ url, projectionMode = 'reproject', viewProjection, opacity = 1, resolutionMultiplier = 1, debounceMs = 500, enablePerf = false, nodata = 0, fetchOptions } = {}) {
   const canvasPerfMonitor = enablePerf ? createPerfMonitor('canvasFunction') : null
   const renderPerfMonitor = enablePerf ? createPerfMonitor('loadAndRender') : null
-  const tiff = await tiffFromUrl(url, { blockSize: GEOTIFF_BLOCK_SIZE, cacheSize: GEOTIFF_CACHE_SIZE })
+  const tiff = await tiffFromUrl(url, { blockSize: GEOTIFF_BLOCK_SIZE, cacheSize: GEOTIFF_CACHE_SIZE, ...fetchOptions })
 
   const [bandInfo, image] = await Promise.all([
     detectBands(tiff),
     tiff.getImage(0)
   ])
 
-  const overview = await getMinMaxFromOverview(tiff, bandInfo.bands)
+  const overview = await getMinMaxFromOverview(tiff, bandInfo.bands, { nodata })
   const stats = overview.stats
   const samples = bandInfo.bands.map(b => b - 1)
   let currentColormap = null
@@ -103,7 +103,7 @@ export async function createCOGImageLayer({ url, projectionMode = 'reproject', v
   previewCanvas.height = pvH
   const previewCtx = previewCanvas.getContext('2d')
   const previewImgData = previewCtx.createImageData(pvW, pvH)
-  fillPixelData(previewImgData.data, overview.rasters, bandInfo, stats, pvW * pvH, currentColormap)
+  fillPixelData(previewImgData.data, overview.rasters, bandInfo, stats, pvW * pvH, currentColormap, nodata)
   previewCtx.putImageData(previewImgData, 0, 0)
   cachedCanvas = previewCanvas
   cachedExtent = viewExtent.slice()
@@ -153,7 +153,7 @@ export async function createCOGImageLayer({ url, projectionMode = 'reproject', v
         tmpCanvas.height = natH
         const tmpCtx = tmpCanvas.getContext('2d')
         const imgData = tmpCtx.createImageData(natW, natH)
-        fillPixelData(imgData.data, rasters, bandInfo, stats, natW * natH, currentColormap)
+        fillPixelData(imgData.data, rasters, bandInfo, stats, natW * natH, currentColormap, nodata)
         tmpCtx.putImageData(imgData, 0, 0)
 
         const canvas = document.createElement('canvas')
