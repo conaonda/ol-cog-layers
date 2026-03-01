@@ -6,6 +6,7 @@ import { fromUrl as tiffFromUrl, Pool } from 'geotiff'
 import { detectBands, getMinMaxFromOverview } from './cogLayer.js'
 import { COLORMAPS } from './colormap.js'
 import { createPerfMonitor } from './perf.js'
+import { fillPixelDataAsync } from './fillPixelWorker.js'
 
 const GEOTIFF_BLOCK_SIZE = 524288
 const GEOTIFF_CACHE_SIZE = 500
@@ -156,14 +157,28 @@ export async function createCOGImageLayer({ url, projectionMode = 'reproject', v
       const natH = rasters.height
       if (natW === 0 || natH === 0) return
 
-      // Render to native-resolution temp canvas and scale to viewport
-      const syncRender = () => {
+      // Build pixel data — try worker first, fallback to main thread
+      const lut = currentColormap ? COLORMAPS[currentColormap] : null
+      const rasterArrays = []
+      for (let i = 0; i < rasters.length; i++) rasterArrays.push(rasters[i])
+      let pixelData = await fillPixelDataAsync(rasterArrays, bandInfo.type, stats, natW * natH, lut, nodata)
+
+      if (signal.aborted) return
+
+      // Render pixel data to canvas (main thread only — canvas API not available in workers)
+      const renderToCanvas = () => {
         const tmpCanvas = document.createElement('canvas')
         tmpCanvas.width = natW
         tmpCanvas.height = natH
         const tmpCtx = tmpCanvas.getContext('2d')
         const imgData = tmpCtx.createImageData(natW, natH)
-        fillPixelData(imgData.data, rasters, bandInfo, stats, natW * natH, currentColormap, nodata)
+
+        if (pixelData) {
+          imgData.data.set(pixelData)
+        } else {
+          // Worker unavailable — fallback to main thread
+          fillPixelData(imgData.data, rasters, bandInfo, stats, natW * natH, currentColormap, nodata)
+        }
         tmpCtx.putImageData(imgData, 0, 0)
 
         const canvas = document.createElement('canvas')
@@ -180,7 +195,7 @@ export async function createCOGImageLayer({ url, projectionMode = 'reproject', v
 
       let canvas
       if (renderPerfMonitor) {
-        canvas = renderPerfMonitor.measure(syncRender, { width: natW, height: natH, pixels: natW * natH })
+        canvas = renderPerfMonitor.measure(renderToCanvas, { width: natW, height: natH, pixels: natW * natH, workerUsed: !!pixelData })
         const last = renderPerfMonitor.report()
         if (last.maxMs > 16 && last.drops > 0) {
           console.warn(`[${renderPerfMonitor.label}] Frame drop detected: last render took ${last.maxMs.toFixed(1)}ms (drops: ${last.drops}/${last.renders})`)
@@ -190,7 +205,7 @@ export async function createCOGImageLayer({ url, projectionMode = 'reproject', v
           }
         }
       } else {
-        canvas = syncRender()
+        canvas = renderToCanvas()
       }
 
       // Update cache and trigger re-render
