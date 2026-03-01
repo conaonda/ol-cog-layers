@@ -62,6 +62,12 @@ export interface PerfResult {
   }
 }
 
+export interface FetchOptions {
+  headers?: Record<string, string>
+  credentials?: RequestCredentials
+  maxRanges?: number
+}
+
 export interface COGLayerOptions {
   url: string
   bandInfo?: BandInfo
@@ -70,6 +76,8 @@ export interface COGLayerOptions {
   targetTileSize?: number
   opacity?: number
   preload?: number
+  nodata?: number
+  fetchOptions?: FetchOptions
 }
 
 export interface COGLayerResult {
@@ -90,6 +98,8 @@ export interface COGImageLayerOptions {
   resolutionMultiplier?: number
   debounceMs?: number
   enablePerf?: boolean
+  nodata?: number
+  fetchOptions?: FetchOptions
 }
 
 export interface COGImageLayerResult {
@@ -106,15 +116,17 @@ export interface COGImageLayerResult {
   resetPerf(): void
 }
 
-export type ColormapName = 'grayscale' | 'viridis' | 'inferno' | 'plasma'
+export type ColormapName = 'grayscale' | 'viridis' | 'inferno' | 'plasma' | (string & {})
 
-export declare const COLORMAPS: Record<ColormapName, number[][] | null>
+export declare const COLORMAPS: Record<string, number[][] | null>
+
+export declare function registerColormap(name: string, lut: number[][]): void
 
 export declare function createCOGLayer(options: COGLayerOptions): Promise<COGLayerResult>
 
 export declare function createCOGImageLayer(options: COGImageLayerOptions): Promise<COGImageLayerResult>
 
-export declare function createCOGSource(url: string, bands: number[]): GeoTIFFSource
+export declare function createCOGSource(url: string, bands: number[], options?: { nodata?: number, fetchOptions?: FetchOptions }): GeoTIFFSource
 
 export declare function buildStyle(
   bandInfo: BandInfo,
@@ -133,7 +145,8 @@ export declare function getTotalBands(tiff: GeoTIFF): Promise<number>
 
 export declare function getMinMaxFromOverview(
   tiff: GeoTIFF,
-  bands: number[]
+  bands: number[],
+  options?: { nodata?: number }
 ): Promise<OverviewResult>
 
 export declare function applyColormapToPixel(
@@ -152,5 +165,6 @@ export declare function fillPixelData(
   bandInfo: BandInfo,
   stats: BandStats[],
   pixelCount: number,
-  colormapName: string | null
+  colormapName: string | null,
+  nodata?: number
 ): void

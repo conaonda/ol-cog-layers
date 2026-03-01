@@ -48,6 +48,13 @@ export const COLORMAPS = {
   plasma: interpolateLUT(PLASMA_KEYS)
 }
 
+export function registerColormap(name, lut) {
+  if (!Array.isArray(lut) || lut.length !== 256) {
+    throw new Error('Colormap LUT must be an array of 256 [r, g, b] entries')
+  }
+  COLORMAPS[name] = lut
+}
+
 /**
  * WebGL용 buildStyle 확장 — 컬러맵 적용
  * 단일 밴드 + 컬러맵일 때 16-stop interpolate 표현식 생성

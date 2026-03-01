@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { COLORMAPS, applyColormapToPixel, buildStyleWithColormap } from '../src/colormap.js'
+import { COLORMAPS, applyColormapToPixel, buildStyleWithColormap, registerColormap } from '../src/colormap.js'
 
 describe('COLORMAPS', () => {
   it('grayscale is null', () => {
@@ -121,5 +121,23 @@ describe('buildStyleWithColormap', () => {
     const style = buildStyleWithColormap(rgbBand, stats, 'viridis')
     // R channel: ['/', ['-', ['band', 1], 10], 200]
     expect(style.color[1]).toEqual(['/', ['-', ['band', 1], 10], 200])
+  })
+})
+
+describe('registerColormap', () => {
+  it('registers a custom colormap', () => {
+    const lut = Array.from({ length: 256 }, (_, i) => [i, 0, 0])
+    registerColormap('custom-red', lut)
+    expect(COLORMAPS['custom-red']).toBe(lut)
+    const result = applyColormapToPixel(128, 'custom-red')
+    expect(result).toEqual([128, 0, 0])
+  })
+
+  it('throws for invalid LUT length', () => {
+    expect(() => registerColormap('bad', [[0, 0, 0]])).toThrow('256')
+  })
+
+  it('throws for non-array LUT', () => {
+    expect(() => registerColormap('bad', 'not-array')).toThrow('256')
   })
 })
