@@ -13,7 +13,7 @@ const GEOTIFF_CACHE_SIZE = 500
 let pool
 try { pool = new Pool(4) } catch { /* worker unavailable – decode on main thread */ }
 
-function fillPixelData(px, rasters, bandInfo, stats, pixelCount, colormapName) {
+export function fillPixelData(px, rasters, bandInfo, stats, pixelCount, colormapName) {
   if (bandInfo.type === 'rgb') {
     const r = rasters[0], g = rasters[1], b = rasters[2]
     const rMin = stats[0].min, rScale = 255 / (stats[0].max - stats[0].min)
