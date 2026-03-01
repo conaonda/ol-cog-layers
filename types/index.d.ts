@@ -21,6 +21,47 @@ export interface OverviewResult {
   height: number
 }
 
+export interface PerfReport {
+  renders: number
+  totalMs: number
+  maxMs: number
+  drops: number
+  avgMs: number
+}
+
+export interface PerfDropStreak {
+  start: number
+  end: number
+  count: number
+  maxMs: number
+}
+
+export interface PerfAnalysis {
+  p50: number
+  p95: number
+  p99: number
+  dropRate: number
+  recentDrops: PerfDropStreak[]
+}
+
+export interface PerfMonitor {
+  measure<T>(fn: () => T, meta?: Record<string, unknown>): T
+  measureAsync<T>(fn: () => Promise<T>, meta?: Record<string, unknown>): Promise<T>
+  report(): PerfReport
+  analyze(): PerfAnalysis
+  reset(): void
+  label: string
+}
+
+export interface PerfResult {
+  canvasFunction: PerfReport
+  loadAndRender: PerfReport
+  analysis: {
+    canvasFunction: PerfAnalysis
+    loadAndRender: PerfAnalysis
+  }
+}
+
 export interface COGLayerOptions {
   url: string
   bandInfo?: BandInfo
@@ -48,6 +89,7 @@ export interface COGImageLayerOptions {
   opacity?: number
   resolutionMultiplier?: number
   debounceMs?: number
+  enablePerf?: boolean
 }
 
 export interface COGImageLayerResult {
@@ -60,6 +102,8 @@ export interface COGImageLayerResult {
   getBandInfo(): BandInfo
   setStats(newStats: BandStats[]): void
   setColormap(name: string | null): void
+  getPerf(): PerfResult | null
+  resetPerf(): void
 }
 
 export type ColormapName = 'grayscale' | 'viridis' | 'inferno' | 'plasma'
@@ -96,3 +140,17 @@ export declare function applyColormapToPixel(
   normalizedValue: number,
   colormapName: string
 ): number[]
+
+export declare function createPerfMonitor(
+  label?: string,
+  options?: { maxHistory?: number }
+): PerfMonitor
+
+export declare function fillPixelData(
+  px: Uint8ClampedArray,
+  rasters: ArrayLike<number>[],
+  bandInfo: BandInfo,
+  stats: BandStats[],
+  pixelCount: number,
+  colormapName: string | null
+): void

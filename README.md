@@ -143,8 +143,46 @@ Returns: `Promise<{ layer, source, extent, center, projection, zoom, tiff }>`
 | `opacity` | `number` | `1` | Layer opacity |
 | `resolutionMultiplier` | `number` | `1` | Resolution scale factor |
 | `debounceMs` | `number` | `500` | Debounce delay (ms) before re-fetching raster data on view change |
+| `enablePerf` | `boolean` | `false` | Enable built-in performance monitoring |
 
-Returns: `Promise<{ layer, source, extent, center, projection, tiff, getStats(), getBandInfo(), setStats(stats), setColormap(name) }>`
+Returns: `Promise<{ layer, source, extent, center, tiff, getStats(), getBandInfo(), setStats(stats), setColormap(name), getPerf(), resetPerf() }>`
+
+**Methods on result object:**
+
+| Method | Description |
+|---|---|
+| `getStats()` | Returns current `BandStats[]` |
+| `getBandInfo()` | Returns detected `BandInfo` |
+| `setStats(stats)` | Override min/max statistics |
+| `setColormap(name)` | Set colormap: `'viridis'` \| `'inferno'` \| `'plasma'` \| `null` |
+| `getPerf()` | Returns performance report with `{ canvasFunction, loadAndRender, analysis }` or `null` if `enablePerf` is `false` |
+| `resetPerf()` | Reset all performance metrics and history |
+
+### `createPerfMonitor(label?, options?)`
+
+Low-level performance monitor utility. Used internally by `createCOGImageLayer` when `enablePerf` is `true`.
+
+```js
+import { createPerfMonitor } from '@conaonda/ol-cog-layers'
+
+const monitor = createPerfMonitor('myLabel', { maxHistory: 500 })
+const result = monitor.measure(() => expensiveOperation(), { width: 1024 })
+console.log(monitor.report())   // { renders, totalMs, maxMs, drops, avgMs }
+console.log(monitor.analyze())  // { p50, p95, p99, dropRate, recentDrops }
+monitor.reset()
+```
+
+## Error Handling
+
+Both `createCOGLayer` and `createCOGImageLayer` are async and may throw on network errors or invalid COG files. Wrap calls in try-catch:
+
+```js
+try {
+  const cog = await createCOGImageLayer({ url, viewProjection: 'EPSG:3857' })
+} catch (err) {
+  console.error('Failed to load COG:', err.message)
+}
+```
 
 ## License
 
