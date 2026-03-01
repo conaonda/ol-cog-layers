@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Performance Monitor — ol-cog-layers</title>
+  <link rel="stylesheet" href="../shared/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.5.0/ol.css">
+  <style>
+    .perf-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 12px; }
+    .perf-table th, .perf-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid #eee; }
+    .perf-table th { font-weight: 600; color: #666; }
+    .perf-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .perf-section h3 { margin: 12px 0 4px; font-size: 13px; color: #888; text-transform: uppercase; }
+    #reset-btn { margin-top: 8px; padding: 6px 16px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <a href="../">← Examples</a>
+    <h1>Performance Monitor</h1>
+  </div>
+  <div class="example-container">
+    <div class="code-panel">
+      <h2>Performance</h2>
+      <div id="status" class="status loading">Loading COG…</div>
+      <div class="perf-section">
+        <h3>canvasFunction</h3>
+        <table class="perf-table">
+          <tr><th>Renders</th><td class="num" id="cf-renders">0</td></tr>
+          <tr><th>Avg (ms)</th><td class="num" id="cf-avg">0.00</td></tr>
+          <tr><th>Max (ms)</th><td class="num" id="cf-max">0.00</td></tr>
+          <tr><th>Drops</th><td class="num" id="cf-drops">0</td></tr>
+        </table>
+      </div>
+      <div class="perf-section">
+        <h3>loadAndRender</h3>
+        <table class="perf-table">
+          <tr><th>Renders</th><td class="num" id="lr-renders">0</td></tr>
+          <tr><th>Avg (ms)</th><td class="num" id="lr-avg">0.00</td></tr>
+          <tr><th>Max (ms)</th><td class="num" id="lr-max">0.00</td></tr>
+          <tr><th>Drops</th><td class="num" id="lr-drops">0</td></tr>
+        </table>
+      </div>
+      <div class="perf-section">
+        <h3>Analysis (loadAndRender)</h3>
+        <table class="perf-table">
+          <tr><th>p50 (ms)</th><td class="num" id="an-p50">—</td></tr>
+          <tr><th>p95 (ms)</th><td class="num" id="an-p95">—</td></tr>
+          <tr><th>p99 (ms)</th><td class="num" id="an-p99">—</td></tr>
+          <tr><th>Drop rate</th><td class="num" id="an-drop-rate">—</td></tr>
+        </table>
+      </div>
+      <button id="reset-btn">Reset</button>
+    </div>
+    <div class="map-panel">
+      <div id="map" class="map"></div>
+    </div>
+  </div>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

@@ -5,6 +5,7 @@ import { intersects, getIntersection } from 'ol/extent'
 import { fromUrl as tiffFromUrl, Pool } from 'geotiff'
 import { detectBands, getMinMaxFromOverview } from './cogLayer.js'
 import { COLORMAPS } from './colormap.js'
+import { createPerfMonitor } from './perf.js'
 
 const GEOTIFF_BLOCK_SIZE = 524288
 const GEOTIFF_CACHE_SIZE = 500
@@ -50,7 +51,9 @@ function fillPixelData(px, rasters, bandInfo, stats, pixelCount, colormapName) {
   }
 }
 
-export async function createCOGImageLayer({ url, projectionMode = 'reproject', viewProjection, opacity = 1, resolutionMultiplier = 1, debounceMs = 500 }) {
+export async function createCOGImageLayer({ url, projectionMode = 'reproject', viewProjection, opacity = 1, resolutionMultiplier = 1, debounceMs = 500, enablePerf = false }) {
+  const canvasPerfMonitor = enablePerf ? createPerfMonitor('canvasFunction') : null
+  const renderPerfMonitor = enablePerf ? createPerfMonitor('loadAndRender') : null
   const tiff = await tiffFromUrl(url, { blockSize: GEOTIFF_BLOCK_SIZE, cacheSize: GEOTIFF_CACHE_SIZE })
 
   const [bandInfo, image] = await Promise.all([
@@ -143,25 +146,42 @@ export async function createCOGImageLayer({ url, projectionMode = 'reproject', v
       const natH = rasters.height
       if (natW === 0 || natH === 0) return
 
-      // Render to native-resolution temp canvas
-      const tmpCanvas = document.createElement('canvas')
-      tmpCanvas.width = natW
-      tmpCanvas.height = natH
-      const tmpCtx = tmpCanvas.getContext('2d')
-      const imgData = tmpCtx.createImageData(natW, natH)
-      fillPixelData(imgData.data, rasters, bandInfo, stats, natW * natH, currentColormap)
-      tmpCtx.putImageData(imgData, 0, 0)
+      // Render to native-resolution temp canvas and scale to viewport
+      const syncRender = () => {
+        const tmpCanvas = document.createElement('canvas')
+        tmpCanvas.width = natW
+        tmpCanvas.height = natH
+        const tmpCtx = tmpCanvas.getContext('2d')
+        const imgData = tmpCtx.createImageData(natW, natH)
+        fillPixelData(imgData.data, rasters, bandInfo, stats, natW * natH, currentColormap)
+        tmpCtx.putImageData(imgData, 0, 0)
 
-      // Create output canvas and scale rendered data to viewport size
-      const canvas = document.createElement('canvas')
-      canvas.width = size[0]
-      canvas.height = size[1]
-      const ctx = canvas.getContext('2d')
-      const drawW = Math.round(size[0] * (clipW / fullW))
-      const drawH = Math.round(size[1] * (clipH / fullH))
-      const offsetX = Math.round(size[0] * ((clipped[0] - reqExtent[0]) / fullW))
-      const offsetY = Math.round(size[1] * ((reqExtent[3] - clipped[3]) / fullH))
-      ctx.drawImage(tmpCanvas, 0, 0, natW, natH, offsetX, offsetY, drawW, drawH)
+        const canvas = document.createElement('canvas')
+        canvas.width = size[0]
+        canvas.height = size[1]
+        const ctx = canvas.getContext('2d')
+        const drawW = Math.round(size[0] * (clipW / fullW))
+        const drawH = Math.round(size[1] * (clipH / fullH))
+        const offsetX = Math.round(size[0] * ((clipped[0] - reqExtent[0]) / fullW))
+        const offsetY = Math.round(size[1] * ((reqExtent[3] - clipped[3]) / fullH))
+        ctx.drawImage(tmpCanvas, 0, 0, natW, natH, offsetX, offsetY, drawW, drawH)
+        return canvas
+      }
+
+      let canvas
+      if (renderPerfMonitor) {
+        canvas = renderPerfMonitor.measure(syncRender, { width: natW, height: natH, pixels: natW * natH })
+        const last = renderPerfMonitor.report()
+        if (last.maxMs > 16 && last.drops > 0) {
+          console.warn(`[${renderPerfMonitor.label}] Frame drop detected: last render took ${last.maxMs.toFixed(1)}ms (drops: ${last.drops}/${last.renders})`)
+          const analysis = renderPerfMonitor.analyze()
+          if (analysis.dropRate > 0.2) {
+            console.table({ p50: analysis.p50.toFixed(2), p95: analysis.p95.toFixed(2), p99: analysis.p99.toFixed(2), dropRate: (analysis.dropRate * 100).toFixed(1) + '%' })
+          }
+        }
+      } else {
+        canvas = syncRender()
+      }
 
       // Update cache and trigger re-render
       cachedKey = extentKey(extent, size[0], size[1])
@@ -176,34 +196,37 @@ export async function createCOGImageLayer({ url, projectionMode = 'reproject', v
 
   const source = new ImageCanvasSource({
     canvasFunction(extent, resolution, pixelRatio, size, projection) {
-      const key = extentKey(extent, size[0], size[1])
-      if (cachedKey === key && cachedCanvas) {
-        return cachedCanvas
+      const body = () => {
+        const key = extentKey(extent, size[0], size[1])
+        if (cachedKey === key && cachedCanvas) {
+          return cachedCanvas
+        }
+
+        const canvas = document.createElement('canvas')
+        canvas.width = size[0]
+        canvas.height = size[1]
+
+        if (cachedCanvas && cachedExtent) {
+          const ctx = canvas.getContext('2d')
+          const newW = extent[2] - extent[0]
+          const newH = extent[3] - extent[1]
+          const dx = (cachedExtent[0] - extent[0]) / newW * size[0]
+          const dy = (extent[3] - cachedExtent[3]) / newH * size[1]
+          const dw = (cachedExtent[2] - cachedExtent[0]) / newW * size[0]
+          const dh = (cachedExtent[3] - cachedExtent[1]) / newH * size[1]
+          ctx.drawImage(cachedCanvas, dx, dy, dw, dh)
+        }
+
+        pendingExtent = extent
+        pendingSize = size
+
+        clearTimeout(debounceTimer)
+        debounceTimer = setTimeout(() => loadAndRender(pendingExtent, pendingSize), debounceMs)
+
+        return canvas
       }
 
-      // Create new canvas, draw cached image at correct position/scale
-      const canvas = document.createElement('canvas')
-      canvas.width = size[0]
-      canvas.height = size[1]
-
-      if (cachedCanvas && cachedExtent) {
-        const ctx = canvas.getContext('2d')
-        const newW = extent[2] - extent[0]
-        const newH = extent[3] - extent[1]
-        const dx = (cachedExtent[0] - extent[0]) / newW * size[0]
-        const dy = (extent[3] - cachedExtent[3]) / newH * size[1]
-        const dw = (cachedExtent[2] - cachedExtent[0]) / newW * size[0]
-        const dh = (cachedExtent[3] - cachedExtent[1]) / newH * size[1]
-        ctx.drawImage(cachedCanvas, dx, dy, dw, dh)
-      }
-
-      pendingExtent = extent
-      pendingSize = size
-
-      clearTimeout(debounceTimer)
-      debounceTimer = setTimeout(() => loadAndRender(pendingExtent, pendingSize), debounceMs)
-
-      return canvas
+      return canvasPerfMonitor ? canvasPerfMonitor.measure(body) : body()
     },
     ratio: 1
   })
@@ -229,6 +252,22 @@ export async function createCOGImageLayer({ url, projectionMode = 'reproject', v
       currentColormap = name || null
       cachedKey = null
       source.changed()
+    },
+    getPerf() {
+      if (!enablePerf) return null
+      return {
+        canvasFunction: canvasPerfMonitor.report(),
+        loadAndRender: renderPerfMonitor.report(),
+        analysis: {
+          canvasFunction: canvasPerfMonitor.analyze(),
+          loadAndRender: renderPerfMonitor.analyze()
+        }
+      }
+    },
+    resetPerf() {
+      if (!enablePerf) return
+      canvasPerfMonitor.reset()
+      renderPerfMonitor.reset()
     }
   }
 }
