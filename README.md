@@ -149,6 +149,9 @@ Returns: `Promise<{ layer, source, extent, center, projection, zoom, tiff }>`
 | `enablePerf` | `boolean` | `false` | Enable built-in performance monitoring |
 | `nodata` | `number` | `0` | Nodata value to treat as transparent |
 | `fetchOptions` | `object` | — | Options passed to geotiff.js source (e.g. `{ headers: { Authorization: 'Bearer ...' } }`) |
+| `onLoadStart` | `function` | — | Callback when raster loading begins |
+| `onLoadEnd` | `function` | — | Callback when raster loading completes |
+| `onLoadError` | `function` | — | Callback `(error) => {}` when raster loading fails |
 
 Returns: `Promise<{ layer, source, extent, center, tiff, getStats(), getBandInfo(), setStats(stats), setColormap(name), getPerf(), resetPerf() }>`
 

@@ -461,4 +461,23 @@ describe('createCOGLayer', () => {
 
     expect(result.layer).toBeDefined()
   })
+
+  it('throws when url is missing', async () => {
+    await expect(createCOGLayer({})).rejects.toThrow('url is required')
+  })
+
+  it('throws when affine mode without viewProjection', async () => {
+    await expect(createCOGLayer({
+      url: 'http://example.com/test.tif',
+      projectionMode: 'affine'
+    })).rejects.toThrow('viewProjection is required for affine mode')
+  })
+
+  it('wraps tiff loading errors', async () => {
+    fromUrl.mockRejectedValue(new Error('Network error'))
+    await expect(createCOGLayer({
+      url: 'http://example.com/bad.tif',
+      viewProjection: 'EPSG:3857'
+    })).rejects.toThrow('Failed to load COG')
+  })
 })
