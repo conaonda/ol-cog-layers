@@ -7,6 +7,7 @@ import { detectBands, getMinMaxFromOverview } from './cogLayer.js'
 import { COLORMAPS } from './colormap.js'
 import { createPerfMonitor } from './perf.js'
 import { fillPixelDataAsync } from './fillPixelWorker.js'
+import { computeBandMath } from './bandMath.js'
 
 const GEOTIFF_BLOCK_SIZE = 524288
 const GEOTIFF_CACHE_SIZE = 500
@@ -52,7 +53,7 @@ export function fillPixelData(px, rasters, bandInfo, stats, pixelCount, colormap
   }
 }
 
-export async function createCOGImageLayer({ url, projectionMode = 'reproject', viewProjection, opacity = 1, resolutionMultiplier = 1, debounceMs = 500, enablePerf = false, nodata = 0, fetchOptions, onLoadStart, onLoadEnd, onLoadError } = {}) {
+export async function createCOGImageLayer({ url, projectionMode = 'reproject', viewProjection, opacity = 1, resolutionMultiplier = 1, debounceMs = 500, enablePerf = false, nodata = 0, fetchOptions, onLoadStart, onLoadEnd, onLoadError, bandMath, bandMathRange } = {}) {
   if (!url) throw new Error('url is required')
   if (projectionMode === 'affine' && !viewProjection) throw new Error('viewProjection is required for affine mode')
 
@@ -113,7 +114,16 @@ export async function createCOGImageLayer({ url, projectionMode = 'reproject', v
   previewCanvas.height = pvH
   const previewCtx = previewCanvas.getContext('2d')
   const previewImgData = previewCtx.createImageData(pvW, pvH)
-  fillPixelData(previewImgData.data, overview.rasters, bandInfo, stats, pvW * pvH, currentColormap, nodata)
+  if (bandMath) {
+    const overviewRasters = []
+    for (let i = 0; i < overview.rasters.length; i++) overviewRasters.push(overview.rasters[i])
+    const computed = computeBandMath(overviewRasters, bandMath, pvW * pvH)
+    const bmRange = bandMathRange || [-1, 1]
+    const bmStats = [{ min: bmRange[0], max: bmRange[1] }]
+    fillPixelData(previewImgData.data, [computed], { type: 'gray', bands: [1] }, bmStats, pvW * pvH, currentColormap, nodata)
+  } else {
+    fillPixelData(previewImgData.data, overview.rasters, bandInfo, stats, pvW * pvH, currentColormap, nodata)
+  }
   previewCtx.putImageData(previewImgData, 0, 0)
   cachedCanvas = previewCanvas
   cachedExtent = viewExtent.slice()
@@ -158,10 +168,22 @@ export async function createCOGImageLayer({ url, projectionMode = 'reproject', v
       if (natW === 0 || natH === 0) return
 
       // Build pixel data — try worker first, fallback to main thread
-      const lut = currentColormap ? COLORMAPS[currentColormap] : null
       const rasterArrays = []
       for (let i = 0; i < rasters.length; i++) rasterArrays.push(rasters[i])
-      let pixelData = await fillPixelDataAsync(rasterArrays, bandInfo.type, stats, natW * natH, lut, nodata)
+
+      let pixelData
+      if (bandMath) {
+        // Band math: compute custom function → single band → gray/colormap rendering
+        const computed = computeBandMath(rasterArrays, bandMath, natW * natH)
+        const bmRange = bandMathRange || [-1, 1]
+        const bmStats = [{ min: bmRange[0], max: bmRange[1] }]
+        const bmBandInfo = { type: 'gray', bands: [1] }
+        const lut = currentColormap ? COLORMAPS[currentColormap] : null
+        pixelData = await fillPixelDataAsync([computed], bmBandInfo.type, bmStats, natW * natH, lut, nodata)
+      } else {
+        const lut = currentColormap ? COLORMAPS[currentColormap] : null
+        pixelData = await fillPixelDataAsync(rasterArrays, bandInfo.type, stats, natW * natH, lut, nodata)
+      }
 
       if (signal.aborted) return
 
@@ -175,6 +197,12 @@ export async function createCOGImageLayer({ url, projectionMode = 'reproject', v
 
         if (pixelData) {
           imgData.data.set(pixelData)
+        } else if (bandMath) {
+          // Worker unavailable + bandMath — compute on main thread
+          const computed = computeBandMath(rasterArrays, bandMath, natW * natH)
+          const bmRange = bandMathRange || [-1, 1]
+          const bmStats = [{ min: bmRange[0], max: bmRange[1] }]
+          fillPixelData(imgData.data, [computed], { type: 'gray', bands: [1] }, bmStats, natW * natH, currentColormap, nodata)
         } else {
           // Worker unavailable — fallback to main thread
           fillPixelData(imgData.data, rasters, bandInfo, stats, natW * natH, currentColormap, nodata)

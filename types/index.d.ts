@@ -78,6 +78,7 @@ export interface COGLayerOptions {
   preload?: number
   nodata?: number
   fetchOptions?: FetchOptions
+  bandMathStyle?: Record<string, unknown>
 }
 
 export interface COGLayerResult {
@@ -103,6 +104,8 @@ export interface COGImageLayerOptions {
   onLoadStart?: () => void
   onLoadEnd?: () => void
   onLoadError?: (error: Error) => void
+  bandMath?: (bands: number[]) => number
+  bandMathRange?: [number, number]
 }
 
 export interface COGImageLayerResult {
@@ -161,6 +164,22 @@ export declare function createPerfMonitor(
   label?: string,
   options?: { maxHistory?: number }
 ): PerfMonitor
+
+export declare function ndvi(nirBand?: number, redBand?: number): unknown[]
+export declare function ndwi(greenBand?: number, nirBand?: number): unknown[]
+export declare function ndbi(swirBand?: number, nirBand?: number): unknown[]
+export declare function normalizedDifference(bandA: number, bandB: number): unknown[]
+
+export declare function buildBandMathStyle(
+  expression: unknown[],
+  colorStops: [number, number[]][]
+): Record<string, unknown>
+
+export declare function computeBandMath(
+  rasters: ArrayLike<number>[],
+  fn: (bands: number[]) => number,
+  pixelCount: number
+): Float32Array
 
 export declare function fillPixelData(
   px: Uint8ClampedArray,

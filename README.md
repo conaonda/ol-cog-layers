@@ -103,6 +103,52 @@ const style = buildStyleWithColormap(bandInfo, stats, 'viridis')
 layer.setStyle(style)
 ```
 
+### Band Math
+
+#### WebGL Pipeline (createCOGLayer)
+
+```js
+import { createCOGLayer, ndvi, buildBandMathStyle } from '@conaonda/ol-cog-layers'
+
+// Use preset index builder + color stops
+const style = buildBandMathStyle(ndvi(5, 4), [
+  [-1, [165, 0, 38]],
+  [0, [255, 255, 191]],
+  [1, [0, 104, 55]]
+])
+
+const { layer } = await createCOGLayer({
+  url: 'https://example.com/multispectral.tif',
+  viewProjection: 'EPSG:3857',
+  bandMathStyle: style
+})
+```
+
+#### Canvas Pipeline (createCOGImageLayer)
+
+```js
+import { createCOGImageLayer } from '@conaonda/ol-cog-layers'
+
+const { layer } = await createCOGImageLayer({
+  url: 'https://example.com/multispectral.tif',
+  viewProjection: 'EPSG:3857',
+  bandMath: (bands) => (bands[1] - bands[0]) / (bands[1] + bands[0]),  // NDVI
+  bandMathRange: [-1, 1]  // default
+})
+
+// Apply colormap to band math result
+result.setColormap('viridis')
+```
+
+#### Available Presets
+
+| Function | Formula | Default Bands |
+|---|---|---|
+| `ndvi(nir, red)` | (NIR - Red) / (NIR + Red) | nir=2, red=1 |
+| `ndwi(green, nir)` | (Green - NIR) / (Green + NIR) | green=1, nir=2 |
+| `ndbi(swir, nir)` | (SWIR - NIR) / (SWIR + NIR) | swir=1, nir=2 |
+| `normalizedDifference(a, b)` | (A - B) / (A + B) | — |
+
 ### Utility Functions
 
 ```js
@@ -133,6 +179,7 @@ import {
 | `preload` | `number` | `0` | Number of adjacent zoom levels to preload tiles for |
 | `nodata` | `number` | `0` | Nodata value to treat as transparent |
 | `fetchOptions` | `object` | — | Options passed to geotiff.js source (e.g. `{ headers: { Authorization: 'Bearer ...' } }`) |
+| `bandMathStyle` | `object` | — | Custom WebGL style object (e.g. from `buildBandMathStyle`). Overrides default band rendering. |
 
 Returns: `Promise<{ layer, source, extent, center, projection, zoom, tiff }>`
 
@@ -152,6 +199,8 @@ Returns: `Promise<{ layer, source, extent, center, projection, zoom, tiff }>`
 | `onLoadStart` | `function` | — | Callback when raster loading begins |
 | `onLoadEnd` | `function` | — | Callback when raster loading completes |
 | `onLoadError` | `function` | — | Callback `(error) => {}` when raster loading fails |
+| `bandMath` | `function` | — | Custom band math function `(bands: number[]) => number` for pixel-level computation |
+| `bandMathRange` | `[number, number]` | `[-1, 1]` | Expected output range of `bandMath` function for normalization |
 
 Returns: `Promise<{ layer, source, extent, center, tiff, getStats(), getBandInfo(), setStats(stats), setColormap(name), getPerf(), resetPerf() }>`
 

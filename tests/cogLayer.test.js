@@ -462,6 +462,21 @@ describe('createCOGLayer', () => {
     expect(result.layer).toBeDefined()
   })
 
+  it('uses bandMathStyle when provided', async () => {
+    setupSourceMock()
+    const mockTiff = createMockTiff({ samplesPerPixel: 3, photometric: 2 })
+    fromUrl.mockResolvedValue(mockTiff)
+
+    const customStyle = { color: ['interpolate', ['linear'], ['/', ['-', ['band', 2], ['band', 1]], ['+', ['band', 2], ['band', 1]]], -1, ['color', 255, 0, 0], 1, ['color', 0, 128, 0]] }
+    const result = await createCOGLayer({
+      url: 'http://example.com/test.tif',
+      viewProjection: 'EPSG:3857',
+      bandMathStyle: customStyle
+    })
+
+    expect(result.layer.opts.style).toBe(customStyle)
+  })
+
   it('throws when url is missing', async () => {
     await expect(createCOGLayer({})).rejects.toThrow('url is required')
   })
