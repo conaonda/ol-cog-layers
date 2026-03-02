@@ -2,3 +2,4 @@ export { createCOGLayer, createCOGSource, buildStyle, detectBands, getTotalBands
 export { createCOGImageLayer } from './cogImageLayer.js'
 export { COLORMAPS, buildStyleWithColormap, applyColormapToPixel, registerColormap } from './colormap.js'
 export { createPerfMonitor } from './perf.js'
+export { ndvi, ndwi, ndbi, normalizedDifference, buildBandMathStyle, computeBandMath } from './bandMath.js'

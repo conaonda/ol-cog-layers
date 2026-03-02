@@ -328,7 +328,7 @@ function patchTileGridForAffine(tileGrid, pixelToView, sourceTileSizes, overview
   tileGrid.tileCoordIntersectsViewport = function () { return true }
 }
 
-export async function createCOGLayer({ url, bandInfo: overrideBandInfo, projectionMode, viewProjection, targetTileSize = 256, opacity = 1, preload = 0, nodata = 0, fetchOptions } = {}) {
+export async function createCOGLayer({ url, bandInfo: overrideBandInfo, projectionMode, viewProjection, targetTileSize = 256, opacity = 1, preload = 0, nodata = 0, fetchOptions, bandMathStyle } = {}) {
   if (!url) throw new Error('url is required')
   if (projectionMode === 'affine' && !viewProjection) throw new Error('viewProjection is required for affine mode')
 
@@ -374,7 +374,7 @@ export async function createCOGLayer({ url, bandInfo: overrideBandInfo, projecti
 
   const layer = new WebGLTileLayer({
     source: source,
-    style: buildStyle(bandInfo, stats),
+    style: bandMathStyle || buildStyle(bandInfo, stats),
     extent: extent,
     opacity,
     preload,

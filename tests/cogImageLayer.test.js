@@ -247,6 +247,18 @@ describe('createCOGImageLayer', () => {
     expect(bandInfo.bands).toEqual([1, 2, 3])
   })
 
+  it('supports bandMath option', async () => {
+    setupMockTiff()
+    const result = await createCOGImageLayer({
+      url: 'http://example.com/test.tif',
+      viewProjection: 'EPSG:3857',
+      bandMath: (b) => (b[1] - b[0]) / (b[1] + b[0]),
+      bandMathRange: [-1, 1]
+    })
+    expect(result).toHaveProperty('layer')
+    expect(result).toHaveProperty('setColormap')
+  })
+
   it('throws when url is missing', async () => {
     await expect(createCOGImageLayer({ viewProjection: 'EPSG:3857' })).rejects.toThrow('url is required')
   })
